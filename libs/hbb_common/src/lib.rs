@@ -373,7 +373,7 @@ mod test {
 
     #[test]
     fn test_mangle() {
-        let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 16, 32), 50142));
+        let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 16, 32), 30142));
         assert_eq!(addr, AddrMangle::decode(&AddrMangle::encode(addr)));
 
         let addr = "[2001:db8::1]:8080".parse::<SocketAddr>().unwrap();
