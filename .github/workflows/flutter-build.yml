@@ -932,6 +932,7 @@ jobs:
                libc6-dev \
                libclang-dev \
                libgstreamer1.0-dev \
+               libunwind-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
                libpam0g-dev \
@@ -1208,6 +1209,7 @@ jobs:
                libc6-dev \
                libclang-dev \
                libgstreamer1.0-dev \
+               libunwind-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
                libpam0g-dev \
@@ -1770,6 +1772,7 @@ jobs:
                libdbus-1-dev \
                libglib2.0-dev \
                libgstreamer1.0-dev \
+               libunwind-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
                liblzma-dev \
