@@ -161,6 +161,32 @@ jobs:
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
 
+      - name: Apply Hotfix for C++ Compiler Strictness
+        shell: pwsh
+        run: |
+          Write-Host "Applying a patch to fix the persistent 'std::chrono' compilation error..."
+          
+          # We need to ensure the plugin source code is downloaded before we can patch it.
+          # Running 'flutter pub get' achieves this.
+          Push-Location -Path "flutter"
+          flutter pub get
+          Pop-Location
+          
+          $PluginFile = "flutter/windows/flutter/ephemeral/.plugin_symlinks/flutter_gpu_texture_renderer/windows/d3d11_output.cpp"
+          
+          if (Test-Path $PluginFile) {
+            Write-Host "Found the problematic file to patch: $PluginFile"
+            
+            # Prepend the missing #include directive to the file.
+            $originalContent = Get-Content $PluginFile -Raw
+            $patchedContent = "#include <chrono>`n" + $originalContent
+            Set-Content -Path $PluginFile -Value $patchedContent -Force
+            
+            Write-Host "Patch applied successfully. The compiler will now find the 'chrono' header."
+          } else {
+            Write-Warning "Could not find the C++ plugin file to patch. The path might have changed in this version."
+          }
+      
       - name: Build rustdesk
         run: |
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
