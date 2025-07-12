@@ -2005,14 +2005,14 @@ jobs:
         job:
           - {
               target: x86_64-unknown-linux-gnu,
-              distro: ubuntu20.04,
+              distro: ubuntu18.04,
               on: ubuntu-22.04,
               arch: x86_64,
               suffix: "",
             }
           - {
               target: x86_64-unknown-linux-gnu,
-              distro: ubuntu20.04,
+              distro: ubuntu18.04,
               on: ubuntu-22.04,
               arch: x86_64,
               suffix: "-sciter",
@@ -2055,6 +2055,13 @@ jobs:
           shell: /bin/bash
           install: |
             apt-get update -y
+            # 安装 PPA 管理工具
+            apt-get install -y software-properties-common
+            # 添加 Flatpak 官方的稳定版 PPA
+            add-apt-repository -y ppa:flatpak/stable
+            # 再次更新软件源，以拉取 PPA 中的新包信息
+            apt-get update -y
+            # 现在安装的就是来自 PPA 的最新版 Flatpak
             apt-get install -y git flatpak flatpak-builder
           run: |
             # disable git safe.directory
