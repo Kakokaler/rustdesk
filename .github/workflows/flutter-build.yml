@@ -1726,6 +1726,11 @@ jobs:
     if: ${{ inputs.upload-artifact }}
     runs-on: ${{ matrix.job.on }}
     name: build-rustdesk-linux-sciter ${{ matrix.job.target }}
+    # --- 新增的 env 块 ---
+    env:
+      # 在这里为这个特定的 Job 覆盖 VCPKG_COMMIT_ID
+      VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836"
+    # --- env 块结束 ---
     strategy:
       fail-fast: false
       matrix:
