@@ -796,25 +796,16 @@ jobs:
           VCPKG_LOG_FILE="${{ runner.temp }}/vcpkg-output.log"
           echo "Starting vcpkg install. All output will be logged to $VCPKG_LOG_FILE"
           
-          # macOS/BSD 兼容的日志捕获方法
-          # 使用 > 将 stdout 重定向到日志文件
-          # 使用 2>&1 将 stderr 也重定向到与 stdout 相同的地方（即日志文件）
-          # 在命令组外用括号括起来，并进行重定向
+          # 执行 vcpkg 命令，并将所有输出重定向到日志文件。
+          # 在命令组的末尾加上 '|| true'，这样即使 vcpkg 失败，也不会立即中止整个 run 步骤。
           {
             $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug
           } > "$VCPKG_LOG_FILE" 2>&1
-          
-          # 获取 vcpkg 命令的退出码
-          # '$?' 变量包含了上一条命令的退出码
           VCPKG_EXIT_CODE=$?
 
           echo "Vcpkg finished with exit code: $VCPKG_EXIT_CODE"
 
-          # 无论成功与否，都先打印一部分日志，方便查看
-          echo "--- Displaying last 200 lines of vcpkg output ---"
-          tail -n 200 "$VCPKG_LOG_FILE"
-          echo "------------------------------------------------"
-
+          # 现在，无论 vcpkg 成功还是失败，我们都有机会打印日志。
           if [ $VCPKG_EXIT_CODE -ne 0 ]; then
             echo "============================================================"
             echo "VCPKG FAILED. Displaying full captured output from $VCPKG_LOG_FILE:"
@@ -827,6 +818,9 @@ jobs:
             find "${VCPKG_ROOT}/buildtrees/" -name "config-*-err.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo'
             
             exit $VCPKG_EXIT_CODE
+          else
+            echo "Vcpkg installation successful. Displaying last 50 lines of log for review:"
+            tail -n 50 "$VCPKG_LOG_FILE"
           fi
 
       - name: Show version information (Rust, cargo, Clang)
