@@ -793,19 +793,35 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          if ! $VCPKG_ROOT/vcpkg \
-            install \
-            --x-install-root="$VCPKG_ROOT/installed"; then
-            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
-              echo "$_1:"
-              echo "======"
-              cat "$_1"
-              echo "======"
-              echo ""
-            done
-            exit 1
+          # 创建一个文件来捕获所有输出
+          VCPKG_LOG_FILE="${{ runner.temp }}/vcpkg-output.log"
+          
+          echo "Starting vcpkg install. All output will be logged to $VCPKG_LOG_FILE"
+          
+          # 使用 'script' 命令来同时捕获 stdout 和 stderr 到日志文件
+          # '2>&1' 将 stderr 重定向到 stdout
+          # 'tee' 命令将输出同时发送到屏幕和日志文件
+          script -q -c "$VCPKG_ROOT/vcpkg install --x-install-root=\"$VCPKG_ROOT/installed\" --debug" /dev/null | tee "$VCPKG_LOG_FILE"
+          
+          # vcpkg 命令的退出码会通过管道传递，我们需要检查它
+          # `PIPESTATUS[0]` 获取管道中第一个命令（即 vcpkg）的退出码
+          VCPKG_EXIT_CODE=${PIPESTATUS[0]}
+
+          echo "Vcpkg finished with exit code: $VCPKG_EXIT_CODE"
+
+          if [ $VCPKG_EXIT_CODE -ne 0 ]; then
+            echo "============================================================"
+            echo "VCPKG FAILED. Displaying full captured output from $VCPKG_LOG_FILE:"
+            echo "============================================================"
+            cat "$VCPKG_LOG_FILE"
+            
+            echo "============================================================"
+            echo "Also displaying config logs from buildtrees as a fallback:"
+            echo "============================================================"
+            find "${VCPKG_ROOT}/buildtrees/" -name "config-*-err.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo'
+            
+            exit $VCPKG_EXIT_CODE
           fi
-          head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
 
       - name: Show version information (Rust, cargo, Clang)
         shell: bash
