@@ -793,21 +793,27 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          # 创建一个文件来捕获所有输出
           VCPKG_LOG_FILE="${{ runner.temp }}/vcpkg-output.log"
-          
           echo "Starting vcpkg install. All output will be logged to $VCPKG_LOG_FILE"
           
-          # 使用 'script' 命令来同时捕获 stdout 和 stderr 到日志文件
-          # '2>&1' 将 stderr 重定向到 stdout
-          # 'tee' 命令将输出同时发送到屏幕和日志文件
-          script -q -c "$VCPKG_ROOT/vcpkg install --x-install-root=\"$VCPKG_ROOT/installed\" --debug" /dev/null | tee "$VCPKG_LOG_FILE"
+          # macOS/BSD 兼容的日志捕获方法
+          # 使用 > 将 stdout 重定向到日志文件
+          # 使用 2>&1 将 stderr 也重定向到与 stdout 相同的地方（即日志文件）
+          # 在命令组外用括号括起来，并进行重定向
+          {
+            $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug
+          } > "$VCPKG_LOG_FILE" 2>&1
           
-          # vcpkg 命令的退出码会通过管道传递，我们需要检查它
-          # `PIPESTATUS[0]` 获取管道中第一个命令（即 vcpkg）的退出码
-          VCPKG_EXIT_CODE=${PIPESTATUS[0]}
+          # 获取 vcpkg 命令的退出码
+          # '$?' 变量包含了上一条命令的退出码
+          VCPKG_EXIT_CODE=$?
 
           echo "Vcpkg finished with exit code: $VCPKG_EXIT_CODE"
+
+          # 无论成功与否，都先打印一部分日志，方便查看
+          echo "--- Displaying last 200 lines of vcpkg output ---"
+          tail -n 200 "$VCPKG_LOG_FILE"
+          echo "------------------------------------------------"
 
           if [ $VCPKG_EXIT_CODE -ne 0 ]; then
             echo "============================================================"
