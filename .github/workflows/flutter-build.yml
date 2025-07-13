@@ -577,6 +577,14 @@ jobs:
           name: bridge-artifact
           path: ./
 
+      - name: Update Cargo.lock to resolve missing git commits
+        shell: bash
+        run: |
+          echo "Running 'cargo update' to refresh dependencies..."
+          # -p reqwest 告诉 cargo 只更新 reqwest 这一个包和它的相关依赖
+          # 这可以避免不必要地更新所有包，减少潜在风险
+          cargo update -p reqwest
+      
       - name: Build rustdesk lib
         run: |
           rustup target add ${{ matrix.job.target }}
