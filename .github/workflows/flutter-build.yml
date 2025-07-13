@@ -793,19 +793,31 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          if ! $VCPKG_ROOT/vcpkg \
-            install \
-            --x-install-root="$VCPKG_ROOT/installed"; then
-            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
-              echo "$_1:"
-              echo "======"
-              cat "$_1"
-              echo "======"
-              echo ""
-            done
+          # 增加 --debug 参数来获取更详细的 vcpkg 输出
+          if ! $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug; then
+            echo "Vcpkg installation failed. Printing relevant log files..."
+            
+            # 明确打印 aom 配置阶段的日志文件
+            AOM_CONFIG_LOG=$(find "$VCPKG_ROOT/buildtrees/aom/" -name "config-x64-osx-dbg-out.log" -o -name "config-x64-osx-rel-out.log" | head -n 1)
+            
+            if [ -n "$AOM_CONFIG_LOG" ]; then
+              echo "============================================================"
+              echo "Displaying AOM config log: $AOM_CONFIG_LOG"
+              echo "============================================================"
+              cat "$AOM_CONFIG_LOG"
+            else
+              echo "Could not find specific AOM config log."
+            fi
+
+            # 打印所有找到的日志文件，作为备用
+            echo "============================================================"
+            echo "Displaying all found log files as a fallback:"
+            echo "============================================================"
+            # 使用 -print0 和 xargs -0 来安全地处理可能包含空格的文件名
+            find "${VCPKG_ROOT}/buildtrees/" -name "*.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo'
+
             exit 1
           fi
-          head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
 
       - name: Show version information (Rust, cargo, Clang)
         shell: bash
@@ -1972,7 +1984,7 @@ jobs:
         run: |
           # install libarchive-tools for bsdtar command used in AppImageBuilder.yml
           sudo apt-get update -y
-          sudo apt-get install -y libarchive-tools
+          sudo apt-get install -y libarchive-tools libfuse2
           # set-up appimage-builder
           pushd /tmp
           wget -O appimage-builder-x86_64.AppImage https://github.com/AppImageCrafters/appimage-builder/releases/download/v1.1.0/appimage-builder-1.1.0-x86_64.AppImage
