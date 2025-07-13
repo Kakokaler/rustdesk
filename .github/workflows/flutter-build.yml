@@ -792,36 +792,38 @@ jobs:
           doNotCache: false
 
       - name: Install vcpkg dependencies
+        # 这一步我们允许它失败
+        continue-on-error: true
+        id: vcpkg_install
         run: |
           VCPKG_LOG_FILE="${{ runner.temp }}/vcpkg-output.log"
+          echo "VCPKG_LOG_FILE=$VCPKG_LOG_FILE" >> $GITHUB_ENV
+
           echo "Starting vcpkg install. All output will be logged to $VCPKG_LOG_FILE"
           
-          # 执行 vcpkg 命令，并将所有输出重定向到日志文件。
-          # 在命令组的末尾加上 '|| true'，这样即使 vcpkg 失败，也不会立即中止整个 run 步骤。
+          # 直接运行命令，将所有输出重定向到文件。
+          # 我们不再关心退出码，因为下一步会检查。
           {
             $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug
           } > "$VCPKG_LOG_FILE" 2>&1
-          VCPKG_EXIT_CODE=$?
 
-          echo "Vcpkg finished with exit code: $VCPKG_EXIT_CODE"
-
-          # 现在，无论 vcpkg 成功还是失败，我们都有机会打印日志。
-          if [ $VCPKG_EXIT_CODE -ne 0 ]; then
-            echo "============================================================"
-            echo "VCPKG FAILED. Displaying full captured output from $VCPKG_LOG_FILE:"
-            echo "============================================================"
-            cat "$VCPKG_LOG_FILE"
-            
-            echo "============================================================"
-            echo "Also displaying config logs from buildtrees as a fallback:"
-            echo "============================================================"
-            find "${VCPKG_ROOT}/buildtrees/" -name "config-*-err.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo'
-            
-            exit $VCPKG_EXIT_CODE
-          else
-            echo "Vcpkg installation successful. Displaying last 50 lines of log for review:"
-            tail -n 50 "$VCPKG_LOG_FILE"
-          fi
+      - name: Check vcpkg installation result
+        # 只有当上一步失败时（outcome == 'failure'），才运行这一步
+        if: steps.vcpkg_install.outcome == 'failure'
+        run: |
+          echo "============================================================"
+          echo "VCPKG FAILED. Displaying full captured output from ${{ env.VCPKG_LOG_FILE }}:"
+          echo "============================================================"
+          cat "${{ env.VCPKG_LOG_FILE }}"
+          
+          echo "============================================================"
+          echo "Also displaying config logs from buildtrees as a fallback:"
+          echo "============================================================"
+          # 即使 vcpkg install 失败，buildtrees 目录也可能已经被创建
+          find "${VCPKG_ROOT}/buildtrees/" -name "config-*-err.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo' || true
+          
+          # 手动让整个 job 失败
+          exit 1
 
       - name: Show version information (Rust, cargo, Clang)
         shell: bash
