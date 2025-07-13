@@ -791,33 +791,36 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
 
-      - name: Install vcpkg dependencies
-        env:
-          # 通过这个环境变量向 vcpkg 调用的 CMake 传递参数
-          # -Wno-dev 告诉 CMake 不要将开发者警告（developer warnings）视为错误
-          VCPKG_CMAKE_CONFIGURE_OPTIONS: -Wno-dev
+      - name: Pre-install vcpkg host dependencies
+        shell: bash
         run: |
-          # 增加 --debug 参数来获取更详细的 vcpkg 输出
+          echo "Bootstrapping vcpkg and pre-installing nasm..."
+          # 运行 bootstrap，确保 vcpkg 自身准备就绪
+          $VCPKG_ROOT/bootstrap-vcpkg.sh
+          # 为 vcpkg 明确安装它自己版本的 nasm
+          $VCPKG_ROOT/vcpkg install nasm
+
+      - name: Install vcpkg dependencies
+        # 保持我们上次的调试脚本不变，以防万一
+        run: |
           if ! $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug; then
             echo "Vcpkg installation failed. Printing relevant log files..."
             
-            # 明确打印 aom 配置阶段的日志文件
-            AOM_CONFIG_LOG=$(find "$VCPKG_ROOT/buildtrees/aom/" -name "config-x64-osx-dbg-out.log" -o -name "config-x64-osx-rel-out.log" | head -n 1)
+            # 失败后打印日志的逻辑
+            PKGCONF_CONFIG_LOG=$(find "$VCPKG_ROOT/buildtrees/pkgconf/" -name "config-*-err.log" | head -n 1)
             
-            if [ -n "$AOM_CONFIG_LOG" ]; then
+            if [ -n "$PKGCONF_CONFIG_LOG" ]; then
               echo "============================================================"
-              echo "Displaying AOM config log: $AOM_CONFIG_LOG"
+              echo "Displaying pkgconf config log: $PKGCONF_CONFIG_LOG"
               echo "============================================================"
-              cat "$AOM_CONFIG_LOG"
+              cat "$PKGCONF_CONFIG_LOG"
             else
-              echo "Could not find specific AOM config log."
+              echo "Could not find specific pkgconf config log."
             fi
 
-            # 打印所有找到的日志文件，作为备用
             echo "============================================================"
             echo "Displaying all found log files as a fallback:"
             echo "============================================================"
-            # 使用 -print0 和 xargs -0 来安全地处理可能包含空格的文件名
             find "${VCPKG_ROOT}/buildtrees/" -name "*.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo'
 
             exit 1
