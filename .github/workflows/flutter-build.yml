@@ -791,40 +791,21 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
 
-      - name: Pre-install vcpkg host dependencies
-        shell: bash
-        run: |
-          echo "Bootstrapping vcpkg and pre-installing nasm..."
-          # 运行 bootstrap，确保 vcpkg 自身准备就绪
-          $VCPKG_ROOT/bootstrap-vcpkg.sh
-          # 为 vcpkg 明确安装它自己版本的 nasm
-          $VCPKG_ROOT/vcpkg install nasm
-
       - name: Install vcpkg dependencies
-        # 保持我们上次的调试脚本不变，以防万一
         run: |
-          if ! $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug; then
-            echo "Vcpkg installation failed. Printing relevant log files..."
-            
-            # 失败后打印日志的逻辑
-            PKGCONF_CONFIG_LOG=$(find "$VCPKG_ROOT/buildtrees/pkgconf/" -name "config-*-err.log" | head -n 1)
-            
-            if [ -n "$PKGCONF_CONFIG_LOG" ]; then
-              echo "============================================================"
-              echo "Displaying pkgconf config log: $PKGCONF_CONFIG_LOG"
-              echo "============================================================"
-              cat "$PKGCONF_CONFIG_LOG"
-            else
-              echo "Could not find specific pkgconf config log."
-            fi
-
-            echo "============================================================"
-            echo "Displaying all found log files as a fallback:"
-            echo "============================================================"
-            find "${VCPKG_ROOT}/buildtrees/" -name "*.log" -print0 | xargs -0 -I {} sh -c 'echo "--- {} ---"; cat {}; echo'
-
+          if ! $VCPKG_ROOT/vcpkg \
+            install \
+            --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"
+              echo "======"
+              cat "$_1"
+              echo "======"
+              echo ""
+            done
             exit 1
           fi
+          head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
 
       - name: Show version information (Rust, cargo, Clang)
         shell: bash
