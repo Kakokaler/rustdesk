@@ -583,8 +583,8 @@ jobs:
           echo "Running 'cargo update' to refresh dependencies..."
           # -p reqwest 告诉 cargo 只更新 reqwest 这一个包和它的相关依赖
           # 这可以避免不必要地更新所有包，减少潜在风险
-          # 同时更新 reqwest 和 tokio-rustls，以解决版本冲突
-          cargo update -p reqwest -p tokio-rustls
+          # 更新 reqwest，并精确地更新导致冲突的 tokio-rustls@0.26.0 版本
+          cargo update -p reqwest -p tokio-rustls@0.26.0
       
       - name: Build rustdesk lib
         run: |
