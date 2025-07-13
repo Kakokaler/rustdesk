@@ -792,6 +792,10 @@ jobs:
           doNotCache: false
 
       - name: Install vcpkg dependencies
+        env:
+          # 通过这个环境变量向 vcpkg 调用的 CMake 传递参数
+          # -Wno-dev 告诉 CMake 不要将开发者警告（developer warnings）视为错误
+          VCPKG_CMAKE_CONFIGURE_OPTIONS: -Wno-dev
         run: |
           # 增加 --debug 参数来获取更详细的 vcpkg 输出
           if ! $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed" --debug; then
